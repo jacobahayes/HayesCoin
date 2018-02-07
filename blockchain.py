@@ -1,6 +1,13 @@
-import datetime
+from flask import Flask
+from flask import request
 import hashlib
+import datetime
+import json
+import uuid
 
+
+# This node and its transaction list
+node = Flask(__name__)
 
 class Block:
     def __init__(self, index, timestamp, data, previous_hash):
@@ -17,9 +24,46 @@ class Block:
 
 
 # Manually creates a genesis block to start the block chain
-# Naturally, the index is 0. Previous hash is arbitrary
+# Naturally, the index is 0. Proof of work and the previous hash is arbitrary
 def genesis_block():
-    return Block(0, datetime.datetime.now(), "Genesis", "1776")
+    return Block(0, datetime.datetime.now(), {
+        'proof-of-work': 1788,
+        'transactions': None
+    }, '1776')
+
+
+# random ID/address for owner of this node
+miner_addr = uuid.uuid4()
+# this node's copy of the block chain
+blockchain = [genesis_block()]
+# this node's transaction and peer lists
+node_transactions = []
+peer_nodes = []
+
+
+@node.route('/transaction', methods=['POST'])
+def transaction():
+    if request.method == 'POST':
+        # Get transaction data for any POST  request and add transaction to the list
+        new_transaction = request.get_json()
+        node_transactions.append(new_transaction)
+
+        # Log transaction data in the console
+        print('New transaction')
+        print('Sender: ' + new_transaction['sender'])
+        print('Recipient: ' + new_transaction['recipient'])
+        print('Amount: ' + new_transaction['amount'])
+
+        return 'Successful transaction submission\n'
+
+
+# Proof of work algorithm will increment a guess until a node finds a number divisible by 7 and the proof of work for
+#  the previous block
+def proof_of_work(last_proof):
+    guess = last_proof + 1
+    while not (guess % 7 == 0 and guess % last_proof == 0):
+        guess += 1
+    return guess
 
 
 # Takes in the last block in the chain as a parameter in order to add the next one onto the chain
@@ -29,15 +73,4 @@ def new_block(prev_block):
     new_data = "Block: " + str(new_index)
     return Block(new_index, new_timestamp, new_data, prev_block.hash)
 
-
-# Test: create a blockchain with a genesis block, then add an arbitrary number of blocks to the chain
-blockchain = [genesis_block()]
-previous_block = blockchain[0]
-chain_length = 10
-
-for i in range(0, chain_length):
-    next_block = new_block(previous_block)
-    blockchain.append(next_block)
-    previous_block = next_block
-    print(next_block.data + " has been added to the blockchain at " + str(next_block.timestamp))
-    print("Hash: " + str(next_block.hash))
+node.run()
