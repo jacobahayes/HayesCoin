@@ -15,9 +15,9 @@ class Block:
         self.timestamp = timestamp
         self.data = data
         self.previous_hash = previous_hash
-        self.hash = self.hash()
+        self.hash = self.calculate_hash()
 
-    def hash(self):
+    def calculate_hash(self):
         sha = hashlib.sha256()
         sha.update((str(self.index) + str(self.timestamp) + str(self.data) + str(self.previous_hash)).encode())
         return sha.hexdigest()
@@ -59,11 +59,41 @@ def transaction():
 
 # Proof of work algorithm will increment a guess until a node finds a number divisible by 7 and the proof of work for
 #  the previous block
-def proof_of_work(last_proof):
-    guess = last_proof + 1
-    while not (guess % 7 == 0 and guess % last_proof == 0):
+def proof_of_work(prev_proof):
+    guess = prev_proof + 1
+    while not (guess % 7 == 0 and guess % prev_proof == 0):
         guess += 1
     return guess
+
+
+@node.route('/mine', methods = ['GET'])
+def mine():
+    prev_block = blockchain[len(blockchain) - 1]
+    prev_proof = prev_block.data['proof-of-work']
+    # Will hang here until a new proof is found
+    proof = proof_of_work(prev_proof)
+
+    node_transactions.append({
+        'sender': 'network',
+        'recipient': miner_addr,
+        'amount': 1
+    })
+
+    mined_block_data = {
+        'proof-of-work': proof,
+        'transactions': node_transactions
+    }
+    mined_block_index = prev_block.index + 1
+    mined_block = Block(mined_block_index, datetime.datetime.now(), mined_block_data, prev_block.hash)
+    blockchain.append(mined_block)
+
+    return json.dumps({
+        'index': mined_block.index,
+        'timestamp': str(mined_block.timestamp),
+        'data': mined_block_data,
+        'previous_hash': mined_block.previous_hash,
+        'hash': mined_block.hash
+    })
 
 
 # Takes in the last block in the chain as a parameter in order to add the next one onto the chain
