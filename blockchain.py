@@ -4,10 +4,8 @@ import hashlib
 import datetime
 import json
 import uuid
+import requests
 
-
-# This node and its transaction list
-node = Flask(__name__)
 
 class Block:
     def __init__(self, index, timestamp, data, previous_hash):
@@ -32,6 +30,8 @@ def genesis_block():
     }, '1776')
 
 
+# This node and its transaction list
+node = Flask(__name__)
 # random ID/address for owner of this node
 miner_addr = uuid.uuid4()
 # this node's copy of the block chain
@@ -57,6 +57,43 @@ def transaction():
         return 'Successful transaction submission\n'
 
 
+@node.route('/blocks', methods=['GET'])
+def get_blocks():
+    chain_to_send = blockchain
+    # Make blocks dictionaries in order to send as JSON objects later
+    for block in chain_to_send:
+        block = {
+            'index': str(block.index),
+            'timestamp': str(block.timestamp),
+            'data': str(block_data),
+            'hash': block.hash
+        }
+    return json.dumps(chain_to_send)
+
+
+# Get the peer nodes' blockchains
+def find_chains():
+    other_chains = []
+    for url in peer_nodes:
+        chain = requests.get(url + '/blocks').content
+        # convert JSON to python dict
+        chain = json.loads(chain)
+        other_chains.append(chain)
+
+    return other_chains
+
+
+# Consensus algorithm is the standard: longest chain
+def consensus():
+    other_chains = find_chains()
+    longest_chain = blockchain
+    for chain in other_chains:
+        if len(chain) > len(longest_chain):
+            longest_chain = chain
+
+    blockchain = longest_chain
+
+
 # Proof of work algorithm will increment a guess until a node finds a number divisible by 7 and the proof of work for
 #  the previous block
 def proof_of_work(prev_proof):
@@ -66,7 +103,7 @@ def proof_of_work(prev_proof):
     return guess
 
 
-@node.route('/mine', methods = ['GET'])
+@node.route('/mine', methods=['GET'])
 def mine():
     prev_block = blockchain[len(blockchain) - 1]
     prev_proof = prev_block.data['proof-of-work']
@@ -102,5 +139,6 @@ def new_block(prev_block):
     new_timestamp = datetime.datetime.now()
     new_data = "Block: " + str(new_index)
     return Block(new_index, new_timestamp, new_data, prev_block.hash)
+
 
 node.run()
