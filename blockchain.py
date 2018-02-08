@@ -33,7 +33,7 @@ def genesis_block():
 # This node and its transaction list
 node = Flask(__name__)
 # random ID/address for owner of this node
-miner_addr = uuid.uuid4()
+miner_addr = str(uuid.uuid4())
 # this node's copy of the block chain
 blockchain = [genesis_block()]
 # this node's transaction and peer lists
