@@ -52,7 +52,7 @@ def transaction():
         print('New transaction')
         print('Sender: ' + new_transaction['sender'])
         print('Recipient: ' + new_transaction['recipient'])
-        print('Amount: ' + new_transaction['amount'])
+        print('Amount: ' + str(new_transaction['amount']))
 
         return 'Successful transaction submission\n'
 
